@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard - Stockventry{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">Good Evening, {{ request.user.first_name }}</h1>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-lg font-semibold mb-2">Products Sold</h2>
+        <p class="text-3xl font-bold text-blue-600">{{ products_sold }}</p>
+    </div>
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-lg font-semibold mb-2">Total Sales</h2>
+        <p class="text-3xl font-bold text-green-600">{{ total_sales }}</p>
+    </div>
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-lg font-semibold mb-2">Total Cost</h2>
+        <p class="text-3xl font-bold text-red-600">${{ total_cost }}</p>
+    </div>
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-lg font-semibold mb-2">Total Amount</h2>
+        <p class="text-3xl font-bold text-purple-600">${{ total_amount }}</p>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-xl font-semibold mb-4">Activities</h2>
+        <ul>
+            {% for activity in recent_activities %}
+                <li class="mb-2 pb-2 border-b last:border-b-0">{{ activity }}</li>
+            {% empty %}
+                <li>No recent activities</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <h2 class="text-xl font-semibold mb-4">Total Revenue</h2>
+        <div id="revenue-chart" class="h-64"></div>
+    </div>
+</div>
+{% endblock %}
