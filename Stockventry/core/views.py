@@ -1,16 +1,23 @@
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, Count
 from django.utils import timezone
-from .models import Product, Transaction, Order
+from .models import Product, Transaction, Order, Activity
+from django.contrib.auth import authenticate, login, logout
+from django.contrib import messages
+from django.shortcuts import get_object_or_404
+from .forms import CustomUserCreationForm, ProductForm
 
 def dashboard(request):
     today = timezone.now().date()
+    recent_activities = Activity.objects.all()[:10]
     
     context = {
         'products_sold': Transaction.objects.filter(transaction_type='SALE', date__date=today).aggregate(Sum('quantity'))['quantity__sum'] or 0,
         'total_sales': Transaction.objects.filter(transaction_type='SALE', date__date=today).count(),
         'total_cost': Transaction.objects.filter(transaction_type='PURCHASE', date__date=today).aggregate(Sum('total_amount'))['total_amount__sum'] or 0,
         'total_amount': Transaction.objects.filter(transaction_type='SALE', date__date=today).aggregate(Sum('total_amount'))['total_amount__sum'] or 0,
+        'recent_activities': recent_activities,
     }
     
     return render(request, 'dashboard.html', context)
@@ -18,3 +25,144 @@ def dashboard(request):
 def product_list(request):
     products = Product.objects.all()
     return render(request, 'product_list.html', {'products': products})
+
+@login_required
+def create_product(request):
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        category = request.POST.get('category')
+        price = request.POST.get('price')
+        brand_name = request.POST.get('brand_name')
+        cost = request.POST.get('cost')
+        quantity = request.POST.get('quantity')
+
+        new_product = Product.objects.create(
+            name=name,
+            category_id=category,  # Assuming category is passed as an ID
+            price=price,
+            brand_name=brand_name,
+            cost=cost,
+            quantity=quantity,
+            user=request.user
+        )
+
+        # Log activity
+        Activity.objects.create(
+            user=request.user,
+            action_type='CREATE',
+            target_model='Product',
+            target_id=new_product.id,
+            details=f"Created product: {new_product.name}"
+        )
+
+        return redirect('product_list')
+
+    return render(request, 'create_product.html')
+
+@login_required
+def update_product(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+
+    if request.method == 'POST':
+        product.name = request.POST.get('name')
+        product.category_id = request.POST.get('category')
+        product.price = request.POST.get('price')
+        product.brand_name = request.POST.get('brand_name')
+        product.cost = request.POST.get('cost')
+        product.quantity = request.POST.get('quantity')
+        product.save()
+
+        # Log activity
+        Activity.objects.create(
+            user=request.user,
+            action_type='UPDATE',
+            target_model='Product',
+            target_id=product.id,
+            details=f"Updated product: {product.name}"
+        )
+
+        return redirect('product_list')
+
+    return render(request, 'update_product.html', {'product': product})
+
+@login_required
+def delete_product(request, product_id):
+    product = get_object_or_404(Product, id=product_id)
+
+    if request.method == 'POST':  # Assuming deletion is confirmed via a POST request
+        # Log activity before deleting the product
+        Activity.objects.create(
+            user=request.user,
+            action_type='DELETE',
+            target_model='Product',
+            target_id=product.id,
+            details=f"Deleted product: {product.name}"
+        )
+
+        product.delete()
+        return redirect('product_list')
+
+    return render(request, 'delete_product.html', {'product': product})
+
+def signup(request):
+    if request.method == 'POST':
+        form = CustomUserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            return redirect('dashboard')
+    else:
+        form = CustomUserCreationForm()
+    return render(request, 'signup.html', {'form': form})
+
+@login_required
+def products(request):
+    products = Product.objects.all()
+    return render(request, 'products.html', {'products': products})
+
+def signin(request):
+    if request.method == 'POST':
+        email = request.POST['email']
+        password = request.POST['password']
+        user = authenticate(request, username=email, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect('dashboard')
+        else:
+            messages.error(request, 'Invalid email or password')
+    return render(request, 'signin.html')
+
+def signout(request):
+    logout(request)
+    return redirect('signin')
+
+@login_required
+def create_product(request):
+    if request.method == 'POST':
+        form = ProductForm(request.POST)
+        if form.is_valid():
+            product = form.save(commit=False)
+            product.user = request.user
+            product.save()
+
+            # Log activity
+            Activity.objects.create(
+                user=request.user,
+                action_type='CREATE',
+                target_model='Product',
+                target_id=product.id,
+                details=f"Created product: {product.name}"
+            )
+
+            return redirect('product_list')
+    else:
+        form = ProductForm()
+
+    return render(request, 'create_product.html', {'form': form})
+
+def transaction_list(request):
+    transactions = Transaction.objects.all().order_by('-date')
+    context = {
+        'transactions': transactions,
+    }
+    return render(request, 'transaction_list.html', context)

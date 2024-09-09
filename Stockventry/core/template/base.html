@@ -1,4 +1,3 @@
-<!-- base.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -16,7 +15,7 @@
             <ul>
                 <li class="mb-4"><a href="{% url 'dashboard' %}" class="hover:text-blue-200">Dashboard</a></li>
                 <li class="mb-4"><a href="{% url 'products' %}" class="hover:text-blue-200">Products</a></li>
-                <li class="mb-4"><a href="{% url 'transactions' %}" class="hover:text-blue-200">Transaction</a></li>
+                <li class="mb-4"><a href="{% url 'transactions_list' %}" class="hover:text-blue-200">Transaction</a></li>
                 <li class="mb-4"><a href="{% url 'resupply' %}" class="hover:text-blue-200">Resupply</a></li>
                 <li class="mb-4"><a href="{% url 'employees' %}" class="hover:text-blue-200">Employees</a></li>
                 <li class="mb-4"><a href="{% url 'help' %}" class="hover:text-blue-200">Help</a></li>
@@ -31,9 +30,9 @@
                 </div>
                 <div class="flex items-center">
                     <button class="bg-blue-500 text-white px-4 py-2 rounded mr-4 hover:bg-blue-600">New Order</button>
-                    <a href="#" class="text-gray-600 mx-2 hover:text-blue-500">📧</a>
-                    <a href="#" class="text-gray-600 mx-2 hover:text-blue-500">🔔</a>
-                    <a href="#" class="text-gray-600 mx-2 hover:text-blue-500">👤</a>
+                    <a href="/Stockventry/core/static/Images/mail.png" class="text-gray-600 mx-2 hover:text-blue-500"></a>
+                    <a href="/Stockventry/core/static/Images/bell.png" class="text-gray-600 mx-2 hover:text-blue-500"></a>
+                    <a href="/Stockventry/core/static/Images/avatar.png" class="text-gray-600 mx-2 hover:text-blue-500"></a>
                 </div>
             </header>
             <div class="p-6">

@@ -64,3 +64,41 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f"{self.quantity} x {self.product.name} in Order {self.order.id}"
+
+class Activity(models.Model):
+    ACTION_TYPES = [
+        ('CREATE', 'Create'),
+        ('UPDATE', 'Update'),
+        ('DELETE', 'Delete'),
+        ('SALE', 'Sale'),
+        ('PURCHASE', 'Purchase'),
+        ('OTHER', 'Other'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    action_type = models.CharField(max_length=10, choices=ACTION_TYPES)
+    target_model = models.CharField(max_length=50)  # e.g., 'Product', 'Order', etc.
+    target_id = models.IntegerField()
+    details = models.TextField(blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = "Activities"
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"{self.user.username} - {self.action_type} {self.target_model} {self.target_id} at {self.timestamp}"
+
+    def get_activity_description(self):
+        if self.action_type == 'CREATE':
+            return f"{self.user.username} added a new {self.target_model.lower()} (ID: {self.target_id})"
+        elif self.action_type == 'UPDATE':
+            return f"{self.user.username} updated {self.target_model.lower()} (ID: {self.target_id})"
+        elif self.action_type == 'DELETE':
+            return f"{self.user.username} deleted {self.target_model.lower()} (ID: {self.target_id})"
+        elif self.action_type == 'SALE':
+            return f"{self.user.username} made a sale (Order ID: {self.target_id})"
+        elif self.action_type == 'PURCHASE':
+            return f"{self.user.username} made a purchase (Order ID: {self.target_id})"
+        else:
+            return f"{self.user.username} performed an action on {self.target_model.lower()} (ID: {self.target_id})"
