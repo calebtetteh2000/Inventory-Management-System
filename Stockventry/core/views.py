@@ -2,8 +2,9 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, Count
 from django.utils import timezone
-from .models import Product, Transaction, Order, Activity
+from .models import Product, Transaction, Order, Activity, OrderItem
 from django.contrib.auth import authenticate, login, logout
+from django.db import transaction
 from django.contrib import messages
 from django.shortcuts import get_object_or_404
 from .forms import CustomUserCreationForm, ProductForm
@@ -132,9 +133,11 @@ def signin(request):
             messages.error(request, 'Invalid email or password')
     return render(request, 'signin.html')
 
-def signout(request):
+@login_required
+def logout_view(request):
     logout(request)
-    return redirect('signin')
+    messages.success(request, "You have been successfully logged out.")
+    return redirect('login')  # Redirect to your login page
 
 @login_required
 def create_product(request):
@@ -166,3 +169,48 @@ def transaction_list(request):
         'transactions': transactions,
     }
     return render(request, 'transaction_list.html', context)
+
+@login_required
+def new_invoice(request):
+    if request.method == 'POST':
+        with transaction.atomic():
+            # Process the form data and create a new order
+            order = Order.objects.create(
+                user=request.user,
+                status='PENDING',
+                total_amount=0,
+                payment_method=request.POST.get('payment_method', 'CASH')
+            )
+
+            # Process each item in the order
+            total_amount = 0
+            for key, value in request.POST.items():
+                if key.startswith('product_') and value:
+                    product_id = int(value)
+                    quantity = int(request.POST.get(f'quantity_{product_id}', 0))
+                    if quantity > 0:
+                        product = Product.objects.get(id=product_id)
+                        OrderItem.objects.create(
+                            order=order,
+                            product=product,
+                            quantity=quantity,
+                            price=product.price
+                        )
+                        total_amount += product.price * quantity
+
+            # Update the total amount and save the order
+            order.total_amount = total_amount
+            order.save()
+
+        return redirect('invoice_detail', order_id=order.id)
+
+    # If it's a GET request, render the new invoice form
+    products = Product.objects.filter(quantity__gt=0)
+    context = {
+        'products': products,
+        'invoice_id': Order.objects.count() + 1,  # Simple way to generate a new invoice ID
+        'current_date': timezone.now().date(),
+        'current_time': timezone.now().time(),
+        'user': request.user,
+    }
+    return render(request, 'new_invoice.html', context)

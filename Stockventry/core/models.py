@@ -21,6 +21,7 @@ class Product(models.Model):
     quantity = models.IntegerField(default=0)
     date_created = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
+    description = models.TextField(blank=True)
 
     def __str__(self):
         return self.name

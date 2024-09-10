@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mx-auto px-4">
+    <h1 class="text-2xl font-bold mb-4">New Invoice</h1>
+    <form method="post" id="invoice-form" class="space-y-6">
+        {% csrf_token %}
+        <div class="bg-gray-100 p-4 rounded-lg">
+            <p>Invoice ID: #{{ invoice_id }}</p>
+            <p>Date: {{ current_date }}</p>
+            <p>Time: {{ current_time }}</p>
+            <p>Issued by: {{ user.get_full_name }}</p>
+        </div>
+        <h2 class="text-xl font-semibold">Sales</h2>
+        <table class="w-full">
+            <thead>
+                <tr class="bg-gray-200">
+                    <th class="p-2 text-left">Product</th>
+                    <th class="p-2 text-left">Quantity</th>
+                    <th class="p-2 text-left">Price</th>
+                    <th class="p-2 text-left">Total</th>
+                    <th class="p-2 text-left">Action</th>
+                </tr>
+            </thead>
+            <tbody id="product-list">
+                {% for product in products %}
+                <tr data-product-id="{{ product.id }}" class="border-b">
+                    <td class="p-2">
+                        <select name="product_{{ product.id }}" class="product-select w-full border rounded px-2 py-1" required>
+                            <option value="">Select a product</option>
+                            {% for p in products %}
+                            <option value="{{ p.id }}" data-price="{{ p.price }}" {% if p.id == product.id %}selected{% endif %}>{{ p.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td class="p-2"><input type="number" name="quantity_{{ product.id }}" min="1" value="1" class="quantity-input w-20 border rounded px-2 py-1" required></td>
+                    <td class="p-2 product-price">€{{ product.price }}</td>
+                    <td class="p-2 item-total">€{{ product.price }}</td>
+                    <td class="p-2"><button type="button" class="remove-row bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Remove</button></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <button type="button" id="add-product" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">+ Add Product</button>
+        <div class="mt-4">
+            <h2 class="text-xl font-semibold">Payment Method</h2>
+            <select name="payment_method" class="w-full border rounded px-2 py-1 mt-2" required>
+                <option value="cash">Cash</option>
+                <option value="mobile_money">Mobile Money</option>
+                <option value="bank">Bank</option>
+            </select>
+        </div>
+        <div class="mt-4">
+            <h2 class="text-xl font-semibold">Sum Total: <span id="sum-total" class="font-bold">€0.00</span></h2>
+        </div>
+        <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Create Invoice</button>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const productList = document.getElementById('product-list');
+    const addProductButton = document.getElementById('add-product');
+    const sumTotalElement = document.getElementById('sum-total');
+    const form = document.getElementById('invoice-form');
+
+    function updateTotals() {
+        let sumTotal = 0;
+        productList.querySelectorAll('tr').forEach(row => {
+            const quantity = parseInt(row.querySelector('.quantity-input').value);
+            const price = parseFloat(row.querySelector('.product-price').textContent.replace('€', ''));
+            const total = quantity * price;
+            row.querySelector('.item-total').textContent = '€' + total.toFixed(2);
+            sumTotal += total;
+        });
+        sumTotalElement.textContent = '€' + sumTotal.toFixed(2);
+    }
+
+    function createProductRow() {
+        const row = document.createElement('tr');
+        row.classList.add('border-b');
+        row.innerHTML = `
+            <td class="p-2">
+                <select name="product_new" class="product-select w-full border rounded px-2 py-1" required>
+                    <option value="">Select a product</option>
+                    {% for product in products %}
+                    <option value="{{ product.id }}" data-price="{{ product.price }}">{{ product.name }}</option>
+                    {% endfor %}
+                </select>
+            </td>
+            <td class="p-2"><input type="number" name="quantity_new" min="1" value="1" class="quantity-input w-20 border rounded px-2 py-1" required></td>
+            <td class="p-2 product-price">€0.00</td>
+            <td class="p-2 item-total">€0.00</td>
+            <td class="p-2"><button type="button" class="remove-row bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">Remove</button></td>
+        `;
+        return row;
+    }
+
+    function handleProductSelect(event) {
+        const select = event.target;
+        const row = select.closest('tr');
+        const priceCell = row.querySelector('.product-price');
+        const quantityInput = row.querySelector('.quantity-input');
+        const selectedOption = select.options[select.selectedIndex];
+        const price = selectedOption.dataset.price;
+
+        priceCell.textContent = '€' + parseFloat(price).toFixed(2);
+        row.dataset.productId = select.value;
+        select.name = `product_${select.value}`;
+        quantityInput.name = `quantity_${select.value}`;
+
+        updateTotals();
+    }
+
+    productList.addEventListener('input', updateTotals);
+    productList.addEventListener('change', function(event) {
+        if (event.target.classList.contains('product-select')) {
+            handleProductSelect(event);
+        }
+    });
+
+    addProductButton.addEventListener('click', function() {
+        const newRow = createProductRow();
+        productList.appendChild(newRow);
+    });
+
+    productList.addEventListener('click', function(event) {
+        if (event.target.classList.contains('remove-row')) {
+            event.target.closest('tr').remove();
+            updateTotals();
+        }
+    });
+
+    form.addEventListener('submit', function(event) {
+        event.preventDefault();
+        
+        // Validate that at least one product is selected
+        const productSelects = form.querySelectorAll('.product-select');
+        let hasSelectedProduct = false;
+        productSelects.forEach(select => {
+            if (select.value) hasSelectedProduct = true;
+        });
+
+        if (!hasSelectedProduct) {
+            alert('Please select at least one product before submitting the invoice.');
+            return;
+        }
+
+        // If validation passes, submit the form
+        this.submit();
+    });
+
+    // Initial update of totals
+    updateTotals();
+});
+</script>
+{% endblock %}
