@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Help - Stockventry{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <h1 class="text-3xl font-bold mb-6">Frequently Asked Questions</h1>
+
+    <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+        {% for faq in faqs %}
+            <div x-data="{ open: false }" class="mb-4">
+                <button 
+                    @click="open = !open" 
+                    class="flex justify-between items-center w-full px-4 py-2 text-lg font-medium text-left text-blue-700 bg-blue-100 rounded-lg hover:bg-blue-200 focus:outline-none focus-visible:ring focus-visible:ring-blue-500 focus-visible:ring-opacity-75"
+                >
+                    <span>{{ faq.question }}</span>
+                    <svg 
+                        :class="{'transform rotate-180': open}"
+                        class="w-5 h-5 transition-transform duration-200" 
+                        fill="currentColor" 
+                        viewBox="0 0 20 20"
+                    >
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+                <div 
+                    x-show="open" 
+                    x-transition:enter="transition ease-out duration-100" 
+                    x-transition:enter-start="opacity-0 transform scale-95" 
+                    x-transition:enter-end="opacity-100 transform scale-100" 
+                    x-transition:leave="transition ease-in duration-75" 
+                    x-transition:leave-start="opacity-100 transform scale-100" 
+                    x-transition:leave-end="opacity-0 transform scale-95" 
+                    class="mt-2 px-4 py-2 text-gray-700"
+                >
+                    {{ faq.answer }}
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

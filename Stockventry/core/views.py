@@ -8,6 +8,9 @@ from django.db import transaction
 from django.contrib import messages
 from django.shortcuts import get_object_or_404
 from .forms import CustomUserCreationForm, ProductForm
+from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.forms import PasswordChangeForm
+from .forms import UserProfileForm
 
 def dashboard(request):
     today = timezone.now().date()
@@ -27,7 +30,7 @@ def product_list(request):
     products = Product.objects.all()
     return render(request, 'product_list.html', {'products': products})
 
-@login_required
+# @login_required
 def create_product(request):
     if request.method == 'POST':
         name = request.POST.get('name')
@@ -60,7 +63,7 @@ def create_product(request):
 
     return render(request, 'create_product.html')
 
-@login_required
+# @login_required
 def update_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
 
@@ -86,7 +89,7 @@ def update_product(request, product_id):
 
     return render(request, 'update_product.html', {'product': product})
 
-@login_required
+# @login_required
 def delete_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
 
@@ -116,10 +119,10 @@ def signup(request):
         form = CustomUserCreationForm()
     return render(request, 'signup.html', {'form': form})
 
-@login_required
+# @login_required
 def products(request):
     products = Product.objects.all()
-    return render(request, 'products.html', {'products': products})
+    return render(request, 'product.html', {'products': products})
 
 def signin(request):
     if request.method == 'POST':
@@ -139,29 +142,29 @@ def logout_view(request):
     messages.success(request, "You have been successfully logged out.")
     return redirect('login')  # Redirect to your login page
 
-@login_required
-def create_product(request):
-    if request.method == 'POST':
-        form = ProductForm(request.POST)
-        if form.is_valid():
-            product = form.save(commit=False)
-            product.user = request.user
-            product.save()
+# @login_required
+# def create_product(request):
+#     if request.method == 'POST':
+#         form = ProductForm(request.POST)
+#         if form.is_valid():
+#             product = form.save(commit=False)
+#             product.user = request.user
+#             product.save()
 
-            # Log activity
-            Activity.objects.create(
-                user=request.user,
-                action_type='CREATE',
-                target_model='Product',
-                target_id=product.id,
-                details=f"Created product: {product.name}"
-            )
+#             # Log activity
+#             Activity.objects.create(
+#                 user=request.user,
+#                 action_type='CREATE',
+#                 target_model='Product',
+#                 target_id=product.id,
+#                 details=f"Created product: {product.name}"
+#             )
 
-            return redirect('product_list')
-    else:
-        form = ProductForm()
+#             return redirect('product_list')
+#     else:
+#         form = ProductForm()
 
-    return render(request, 'create_product.html', {'form': form})
+#     return render(request, 'create_product.html', {'form': form})
 
 def transaction_list(request):
     transactions = Transaction.objects.all().order_by('-date')
@@ -214,3 +217,55 @@ def new_invoice(request):
         'user': request.user,
     }
     return render(request, 'new_invoice.html', context)
+
+@login_required
+def settings(request):
+    if request.method == 'POST':
+        user_form = UserProfileForm(request.POST, instance=request.user)
+        password_form = PasswordChangeForm(request.user, request.POST)
+        if 'update_profile' in request.POST:
+            if user_form.is_valid():
+                user_form.save()
+                messages.success(request, 'Your profile was successfully updated!')
+                return redirect('settings')
+        elif 'change_password' in request.POST:
+            if password_form.is_valid():
+                user = password_form.save()
+                update_session_auth_hash(request, user)
+                messages.success(request, 'Your password was successfully updated!')
+                return redirect('settings')
+    else:
+        user_form = UserProfileForm(instance=request.user)
+        password_form = PasswordChangeForm(request.user)
+    
+    context = {
+        'user_form': user_form,
+        'password_form': password_form,
+    }
+    return render(request, 'settings.html', context)
+
+@login_required
+def help(request):
+    faqs = [
+        {
+            'question': 'How do I add a new product?',
+            'answer': 'To add a new product, go to the Products page and click on the "Add New Product" button. Fill in the required information and click "Save".'
+        },
+        {
+            'question': 'How can I view my transaction history?',
+            'answer': 'You can view your transaction history by navigating to the Transaction page. Here, you\'ll find a list of all your past transactions, including sales and purchases.'
+        },
+        {
+            'question': 'How do I generate an invoice?',
+            'answer': 'To generate an invoice, go to the Invoice page and click on "New Invoice". Select the products, enter the quantities, and add customer information. Then click "Generate Invoice".'
+        },
+        {
+            'question': 'How can I update my stock levels?',
+            'answer': 'Stock levels are automatically updated when you record sales or purchases. You can also manually adjust stock levels on the Products page by editing a specific product.'
+        },
+        {
+            'question': 'How do I change my account password?',
+            'answer': 'To change your password, go to the Settings page. Scroll down to the "Change Password" section, enter your current password and your new password, then click "Change Password".'
+        }
+    ]
+    return render(request, 'help.html', {'faqs': faqs})
