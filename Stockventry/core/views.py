@@ -10,6 +10,7 @@ from django.shortcuts import get_object_or_404
 from .forms import CustomUserCreationForm, ProductForm
 from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.forms import PasswordChangeForm
+from django.contrib.auth.models import User
 from .forms import UserProfileForm
 
 def dashboard(request):
@@ -30,7 +31,7 @@ def product_list(request):
     products = Product.objects.all()
     return render(request, 'product_list.html', {'products': products})
 
-# @login_required
+@login_required
 def create_product(request):
     if request.method == 'POST':
         name = request.POST.get('name')
@@ -63,7 +64,7 @@ def create_product(request):
 
     return render(request, 'create_product.html')
 
-# @login_required
+@login_required
 def update_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
 
@@ -89,7 +90,7 @@ def update_product(request, product_id):
 
     return render(request, 'update_product.html', {'product': product})
 
-# @login_required
+@login_required
 def delete_product(request, product_id):
     product = get_object_or_404(Product, id=product_id)
 
@@ -112,28 +113,49 @@ def signup(request):
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
-            user = form.save()
-            login(request, user)
-            return redirect('dashboard')
+            try:
+                user = form.save()
+                login(request, user)
+                messages.success(request, 'Account created successfully. Welcome!')
+                return redirect('dashboard')
+            except Exception as e:
+                messages.error(request, f'An error occurred during signup: {str(e)}')
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
     else:
         form = CustomUserCreationForm()
+    
     return render(request, 'signup.html', {'form': form})
 
-# @login_required
+@login_required
 def products(request):
     products = Product.objects.all()
     return render(request, 'product.html', {'products': products})
 
 def signin(request):
     if request.method == 'POST':
-        email = request.POST['email']
+        email = request.POST['email']  
         password = request.POST['password']
+
+        # First, try to authenticate with the email as the username
         user = authenticate(request, username=email, password=password)
+
+        # If that fails, try to find a user with this email and authenticate with their username
+        if user is None:
+            try:
+                user_obj = User.objects.get(email=email)
+                user = authenticate(request, username=user_obj.username, password=password)
+            except User.DoesNotExist:
+                user = None
+
         if user is not None:
             login(request, user)
             return redirect('dashboard')
         else:
             messages.error(request, 'Invalid email or password')
+    
     return render(request, 'signin.html')
 
 @login_required
