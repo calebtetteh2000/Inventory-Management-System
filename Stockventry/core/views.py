@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum, Count
 from django.utils import timezone
-from .models import Product, Transaction, Order, Activity, OrderItem
+from .models import Product, Transaction, Order, Activity, OrderItem, Category
 from django.contrib.auth import authenticate, login, logout
 from django.db import transaction
 from django.contrib import messages
@@ -13,6 +13,7 @@ from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth.models import User
 from .forms import UserProfileForm
 
+@login_required
 def dashboard(request):
     today = timezone.now().date()
     recent_activities = Activity.objects.all()[:10]
@@ -33,21 +34,26 @@ def product_list(request):
 
 @login_required
 def create_product(request):
+    categories = Category.objects.all()
     if request.method == 'POST':
         name = request.POST.get('name')
-        category = request.POST.get('category')
+        category_id = request.POST.get('category')
         price = request.POST.get('price')
         brand_name = request.POST.get('brand_name')
         cost = request.POST.get('cost')
         quantity = request.POST.get('quantity')
+        image = request.FILES.get('image')
+        description = request.POST.get('description')
 
         new_product = Product.objects.create(
             name=name,
-            category_id=category,  # Assuming category is passed as an ID
+            category_id=category_id,
             price=price,
             brand_name=brand_name,
             cost=cost,
             quantity=quantity,
+            image=image,
+            description=description,
             user=request.user
         )
 
@@ -59,10 +65,9 @@ def create_product(request):
             target_id=new_product.id,
             details=f"Created product: {new_product.name}"
         )
-
-        return redirect('product_list')
-
-    return render(request, 'create_product.html')
+        return redirect('products')
+    
+    return render(request, 'create_product.html', {'categories': categories})
 
 @login_required
 def update_product(request, product_id):
@@ -162,7 +167,7 @@ def signin(request):
 def logout_view(request):
     logout(request)
     messages.success(request, "You have been successfully logged out.")
-    return redirect('login')  # Redirect to your login page
+    return redirect('signin')  # Redirect to your login page
 
 # @login_required
 # def create_product(request):

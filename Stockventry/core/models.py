@@ -20,6 +20,7 @@ class Product(models.Model):
     cost = models.DecimalField(max_digits=10, decimal_places=2)
     quantity = models.IntegerField(default=0)
     date_created = models.DateTimeField(auto_now_add=True)
+    image = models.ImageField(upload_to='products/')
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     description = models.TextField(blank=True)
 

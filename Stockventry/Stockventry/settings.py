@@ -118,9 +118,17 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = '/static/'
+
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'core', 'static'),
+    os.path.join(BASE_DIR, 'core', 'static'),  # This includes your core/static directory
 ]
+
+# Configure MEDIA settings for serving uploaded files (if required)
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'core', 'media')
+
+# Optional: Add STATIC_ROOT if you're collecting static files for production
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
